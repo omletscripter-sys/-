@@ -1,0 +1,594 @@
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local function createSound(soundId, volume, pitch)
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://" .. soundId
+    sound.Volume = volume or 0.5
+    sound.Pitch = pitch or 1
+    sound.Parent = SoundService
+    return sound
+end
+
+local typeSound = createSound("112754501285226", 0.1, 1.5)
+local whooshSound = createSound("9120715547", 0.3, 1.2)
+local completeSound = createSound("12222253", 0.4, 1)
+
+local backgroundMusic = createSound("100697759026652", 0.3, 1)
+backgroundMusic.Looped = false
+backgroundMusic.TimePosition = 10
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "DomaGoldenLoader"
+screenGui.Parent = playerGui
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+
+local backgroundFrame = Instance.new("Frame")
+backgroundFrame.Name = "BackgroundFrame"
+backgroundFrame.Size = UDim2.new(1, 0, 1, 0)
+backgroundFrame.Position = UDim2.new(0, 0, 0, 0)
+backgroundFrame.BackgroundColor3 = Color3.fromRGB(15, 10, 5)
+backgroundFrame.BorderSizePixel = 0
+backgroundFrame.Parent = screenGui
+
+local bgGradient = Instance.new("UIGradient")
+bgGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(25, 20, 5)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 25, 5)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 15, 5))
+}
+bgGradient.Rotation = 0
+bgGradient.Parent = backgroundFrame
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 0, 0, 0)
+mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 15, 5)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+mainFrame.ZIndex = 2
+
+local mainGradient = Instance.new("UIGradient")
+mainGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 35, 15)),
+    ColorSequenceKeypoint.new(0.3, Color3.fromRGB(60, 45, 10)),
+    ColorSequenceKeypoint.new(0.7, Color3.fromRGB(45, 40, 20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(25, 20, 10))
+}
+mainGradient.Rotation = 135
+mainGradient.Parent = mainFrame
+
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 20)
+mainCorner.Parent = mainFrame
+
+local glowBorder = Instance.new("UIStroke")
+glowBorder.Color = Color3.fromRGB(255, 215, 0)
+glowBorder.Thickness = 4
+glowBorder.Transparency = 0.3
+glowBorder.Parent = mainFrame
+
+local shadowContainer = Instance.new("Frame")
+shadowContainer.Name = "ShadowContainer"
+shadowContainer.Size = UDim2.new(1, 20, 1, 20)
+shadowContainer.Position = UDim2.new(0, -10, 0, -10)
+shadowContainer.BackgroundTransparency = 1
+shadowContainer.ZIndex = 1
+shadowContainer.Parent = mainFrame
+
+for i = 1, 3 do
+    local shadow = Instance.new("Frame")
+    shadow.Name = "Shadow" .. i
+    shadow.Size = UDim2.new(1, i * 4, 1, i * 4)
+    shadow.Position = UDim2.new(0, -i * 2, 0, -i * 2)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 0.4 + (i * 0.2)
+    shadow.ZIndex = -i
+    shadow.Parent = shadowContainer
+    
+    local shadowCorner = Instance.new("UICorner")
+    shadowCorner.CornerRadius = UDim.new(0, 20 + i * 2)
+    shadowCorner.Parent = shadow
+end
+
+local avatarFrame = Instance.new("Frame")
+avatarFrame.Name = "AvatarFrame"
+avatarFrame.Size = UDim2.new(0, 0, 0, 0)
+avatarFrame.Position = UDim2.new(0, 20, 0, 20)
+avatarFrame.BackgroundColor3 = Color3.fromRGB(60, 50, 10)
+avatarFrame.BorderSizePixel = 0
+avatarFrame.ZIndex = 3
+avatarFrame.Parent = mainFrame
+
+local avatarCorner = Instance.new("UICorner")
+avatarCorner.CornerRadius = UDim.new(0, 60)
+avatarCorner.Parent = avatarFrame
+
+local avatarStroke = Instance.new("UIStroke")
+avatarStroke.Color = Color3.fromRGB(255, 215, 0)
+avatarStroke.Thickness = 3
+avatarStroke.Transparency = 0.2
+avatarStroke.Parent = avatarFrame
+
+local avatarImage = Instance.new("ImageLabel")
+avatarImage.Name = "AvatarImage"
+avatarImage.Size = UDim2.new(1, -10, 1, -10)
+avatarImage.Position = UDim2.new(0, 5, 0, 5)
+avatarImage.BackgroundTransparency = 1
+avatarImage.Image = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. Players:GetUserIdFromNameAsync("doma4790") .. "&width=420&height=420&format=png"
+avatarImage.ScaleType = Enum.ScaleType.Crop
+avatarImage.ZIndex = 4
+avatarImage.Parent = avatarFrame
+
+local avatarImageCorner = Instance.new("UICorner")
+avatarImageCorner.CornerRadius = UDim.new(0, 57)
+avatarImageCorner.Parent = avatarImage
+
+local headerFrame = Instance.new("Frame")
+headerFrame.Name = "HeaderFrame"
+headerFrame.Size = UDim2.new(1, -160, 0, 70)
+headerFrame.Position = UDim2.new(0, 150, 0, 20)
+headerFrame.BackgroundTransparency = 1
+headerFrame.ZIndex = 3
+headerFrame.Parent = mainFrame
+
+local header = Instance.new("TextLabel")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 1, 0)
+header.Position = UDim2.new(0, 0, 0, 0)
+header.BackgroundTransparency = 1
+header.Text = ""
+header.TextColor3 = Color3.fromRGB(255, 215, 0)
+header.TextSize = 32
+header.Font = Enum.Font.FredokaOne
+header.TextXAlignment = Enum.TextXAlignment.Center
+header.TextYAlignment = Enum.TextYAlignment.Center
+header.ZIndex = 4
+header.Parent = headerFrame
+
+local headerStroke = Instance.new("UIStroke")
+headerStroke.Color = Color3.fromRGB(255, 165, 0)
+headerStroke.Thickness = 3
+headerStroke.Transparency = 0.1
+headerStroke.Parent = header
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Name = "Subtitle"
+subtitle.Size = UDim2.new(1, -160, 0, 35)
+subtitle.Position = UDim2.new(0, 150, 0, 100)
+subtitle.BackgroundTransparency = 1
+subtitle.Text = ""
+subtitle.TextColor3 = Color3.fromRGB(255, 223, 100)
+subtitle.TextSize = 18
+subtitle.Font = Enum.Font.FredokaOne
+subtitle.TextXAlignment = Enum.TextXAlignment.Center
+subtitle.TextYAlignment = Enum.TextYAlignment.Center
+subtitle.ZIndex = 4
+subtitle.Parent = mainFrame
+
+local contentFrame = Instance.new("Frame")
+contentFrame.Name = "ContentFrame"
+contentFrame.Size = UDim2.new(1, -40, 1, -280)
+contentFrame.Position = UDim2.new(0, 20, 0, 150)
+contentFrame.BackgroundTransparency = 1
+contentFrame.ZIndex = 3
+contentFrame.Parent = mainFrame
+
+local textDisplay = Instance.new("TextLabel")
+textDisplay.Name = "TextDisplay"
+textDisplay.Size = UDim2.new(1, 0, 1, 0)
+textDisplay.Position = UDim2.new(0, 0, 0, 0)
+textDisplay.BackgroundTransparency = 1
+textDisplay.Text = ""
+textDisplay.TextColor3 = Color3.fromRGB(255, 255, 255)
+textDisplay.TextSize = 16
+textDisplay.Font = Enum.Font.Gotham
+textDisplay.TextWrapped = true
+textDisplay.TextXAlignment = Enum.TextXAlignment.Center
+textDisplay.TextYAlignment = Enum.TextYAlignment.Center
+textDisplay.ZIndex = 4
+textDisplay.Parent = contentFrame
+
+local loadingContainer = Instance.new("Frame")
+loadingContainer.Name = "LoadingContainer"
+loadingContainer.Size = UDim2.new(1, -40, 0, 80)
+loadingContainer.Position = UDim2.new(0, 20, 1, -120)
+loadingContainer.BackgroundTransparency = 1
+loadingContainer.ZIndex = 3
+loadingContainer.Parent = mainFrame
+
+local loadingText = Instance.new("TextLabel")
+loadingText.Name = "LoadingText"
+loadingText.Size = UDim2.new(1, 0, 0, 25)
+loadingText.Position = UDim2.new(0, 0, 0, 0)
+loadingText.BackgroundTransparency = 1
+loadingText.Text = ""
+loadingText.TextColor3 = Color3.fromRGB(255, 215, 0)
+loadingText.TextSize = 16
+loadingText.Font = Enum.Font.GothamBold
+loadingText.TextXAlignment = Enum.TextXAlignment.Center
+loadingText.TextYAlignment = Enum.TextYAlignment.Center
+loadingText.ZIndex = 4
+loadingText.Parent = loadingContainer
+
+local loadingBarBG = Instance.new("Frame")
+loadingBarBG.Name = "LoadingBarBG"
+loadingBarBG.Size = UDim2.new(1, 0, 0, 10)
+loadingBarBG.Position = UDim2.new(0, 0, 0, 35)
+loadingBarBG.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+loadingBarBG.BorderSizePixel = 0
+loadingBarBG.ZIndex = 5
+loadingBarBG.Parent = loadingContainer
+
+local loadingBarCorner = Instance.new("UICorner")
+loadingBarCorner.CornerRadius = UDim.new(0, 5)
+loadingBarCorner.Parent = loadingBarBG
+
+local loadingBar = Instance.new("Frame")
+loadingBar.Name = "LoadingBar"
+loadingBar.Size = UDim2.new(0, 0, 1, 0)
+loadingBar.Position = UDim2.new(0, 0, 0, 0)
+loadingBar.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+loadingBar.BorderSizePixel = 0
+loadingBar.ZIndex = 6
+loadingBar.Parent = loadingBarBG
+
+local barCorner = Instance.new("UICorner")
+barCorner.CornerRadius = UDim.new(0, 5)
+barCorner.Parent = loadingBar
+
+local barGlow = Instance.new("UIStroke")
+barGlow.Color = Color3.fromRGB(255, 223, 100)
+barGlow.Thickness = 2
+barGlow.Transparency = 0.2
+barGlow.Parent = loadingBar
+
+local percentageText = Instance.new("TextLabel")
+percentageText.Name = "PercentageText"
+percentageText.Size = UDim2.new(1, 0, 0, 20)
+percentageText.Position = UDim2.new(0, 0, 0, 55)
+percentageText.BackgroundTransparency = 1
+percentageText.Text = "0%"
+percentageText.TextColor3 = Color3.fromRGB(255, 223, 100)
+percentageText.TextSize = 14
+percentageText.Font = Enum.Font.Gotham
+percentageText.TextXAlignment = Enum.TextXAlignment.Center
+percentageText.TextYAlignment = Enum.TextYAlignment.Center
+percentageText.ZIndex = 4
+percentageText.Parent = loadingContainer
+
+local particleContainer = Instance.new("Frame")
+particleContainer.Name = "ParticleContainer"
+particleContainer.Size = UDim2.new(1, 0, 1, 0)
+particleContainer.Position = UDim2.new(0, 0, 0, 0)
+particleContainer.BackgroundTransparency = 1
+particleContainer.ZIndex = 1
+particleContainer.Parent = screenGui
+
+local musicControlGui = Instance.new("ScreenGui")
+musicControlGui.Name = "MusicControlGui"
+musicControlGui.Parent = playerGui
+musicControlGui.ResetOnSpawn = false
+musicControlGui.Enabled = false
+musicControlGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local musicButtonFrame = Instance.new("Frame")
+musicButtonFrame.Name = "MusicButtonFrame"
+musicButtonFrame.Size = UDim2.new(0, 180, 0, 50)
+musicButtonFrame.Position = UDim2.new(1, -200, 0.5, -25) 
+musicButtonFrame.AnchorPoint = Vector2.new(1, 0.5) 
+musicButtonFrame.BorderSizePixel = 0
+musicButtonFrame.ZIndex = 100
+musicButtonFrame.Parent = musicControlGui
+
+local buttonGlow = Instance.new("ImageLabel")
+buttonGlow.Name = "ButtonGlow"
+buttonGlow.Size = UDim2.new(1, 20, 1, 20)
+buttonGlow.Position = UDim2.new(0, -10, 0, -10)
+buttonGlow.BackgroundTransparency = 1
+buttonGlow.Image = "rbxassetid://5028857084"
+buttonGlow.ImageColor3 = Color3.fromRGB(255, 100, 100)
+buttonGlow.ScaleType = Enum.ScaleType.Slice
+buttonGlow.SliceCenter = Rect.new(24, 24, 24, 24)
+buttonGlow.ZIndex = 99
+buttonGlow.Parent = musicButtonFrame
+
+local stopMusicButton = Instance.new("TextButton")
+stopMusicButton.Name = "StopMusicButton"
+stopMusicButton.Size = UDim2.new(1, 0, 1, 0)
+stopMusicButton.Position = UDim2.new(0, 0, 0, 0)
+stopMusicButton.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+stopMusicButton.Text = "馃攪 STOP MUSIC"
+stopMusicButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+stopMusicButton.TextSize = 18
+stopMusicButton.Font = Enum.Font.GothamBlack
+stopMusicButton.TextStrokeTransparency = 0.5
+stopMusicButton.TextStrokeColor3 = Color3.fromRGB(200, 0, 0)
+stopMusicButton.ZIndex = 101
+stopMusicButton.Parent = musicButtonFrame
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(0, 12)
+buttonCorner.Parent = stopMusicButton
+
+local buttonStroke = Instance.new("UIStroke")
+buttonStroke.Color = Color3.fromRGB(255, 255, 255)
+buttonStroke.Thickness = 2
+buttonStroke.Transparency = 0.2
+buttonStroke.Parent = stopMusicButton
+
+stopMusicButton.MouseEnter:Connect(function()
+    TweenService:Create(stopMusicButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(255, 60, 60),
+        Size = UDim2.new(1, 5, 1, 5),
+        Position = UDim2.new(0, -2.5, 0, -2.5)
+    }):Play()
+    
+    TweenService:Create(buttonGlow, TweenInfo.new(0.3), {
+        ImageTransparency = 0.3,
+        Size = UDim2.new(1, 30, 1, 30),
+        Position = UDim2.new(0, -15, 0, -15)
+    }):Play()
+end)
+
+stopMusicButton.MouseLeave:Connect(function()
+    TweenService:Create(stopMusicButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(255, 80, 80),
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0)
+    }):Play()
+    
+    TweenService:Create(buttonGlow, TweenInfo.new(0.3), {
+        ImageTransparency = 0.7,
+        Size = UDim2.new(1, 20, 1, 20),
+        Position = UDim2.new(0, -10, 0, -10)
+    }):Play()
+end)
+
+stopMusicButton.MouseButton1Down:Connect(function()
+    TweenService:Create(stopMusicButton, TweenInfo.new(0.1), {
+        BackgroundColor3 = Color3.fromRGB(255, 40, 40),
+        Size = UDim2.new(1, -5, 1, -5),
+        Position = UDim2.new(0, 2.5, 0, 2.5)
+    }):Play()
+end)
+
+stopMusicButton.MouseButton1Up:Connect(function()
+    TweenService:Create(stopMusicButton, TweenInfo.new(0.2), {
+        BackgroundColor3 = Color3.fromRGB(255, 60, 60),
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0)
+    }):Play()
+end)
+
+spawn(function()
+    while musicButtonFrame.Parent do
+        TweenService:Create(buttonGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            ImageTransparency = 0.5
+        }):Play()
+        wait(1.5)
+        TweenService:Create(buttonGlow, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+            ImageTransparency = 0.7
+        }):Play()
+        wait(1.5)
+    end
+end)
+
+stopMusicButton.MouseButton1Click:Connect(function()
+    local clickSound = createSound("130785805", 0.5)
+    clickSound:Play()
+    
+    backgroundMusic:Stop()
+    
+    local disappearTween = TweenService:Create(musicButtonFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+        Position = UDim2.new(1, 200, 0, 30),
+        Rotation = 45
+    })
+    
+    disappearTween:Play()
+    disappearTween.Completed:Wait()
+    musicControlGui.Enabled = false
+end)
+
+backgroundMusic.Ended:Connect(function()
+    musicControlGui.Enabled = false
+end)
+
+local function createAdvancedParticle()
+    local particle = Instance.new("Frame")
+    particle.Size = UDim2.new(0, math.random(3, 8), 0, math.random(3, 8))
+    particle.Position = UDim2.new(math.random(), 0, 1.1, 0)
+    particle.BackgroundColor3 = Color3.new(
+        math.random(200, 255)/255,
+        math.random(180, 255)/255,
+        math.random(0, 100)/255
+    )
+    particle.BackgroundTransparency = math.random(30, 70)/100
+    particle.BorderSizePixel = 0
+    particle.ZIndex = 1
+    particle.Parent = particleContainer
+    
+    local particleCorner = Instance.new("UICorner")
+    particleCorner.CornerRadius = UDim.new(1, 0)
+    particleCorner.Parent = particle
+    
+    local particleGlow = Instance.new("UIStroke")
+    particleGlow.Color = particle.BackgroundColor3
+    particleGlow.Thickness = 1
+    particleGlow.Transparency = 0.5
+    particleGlow.Parent = particle
+    
+    local endY = -0.1
+    local duration = math.random(3, 6)
+    local rotation = math.random(-180, 180)
+    
+    local moveTween = TweenService:Create(particle, 
+        TweenInfo.new(duration, Enum.EasingStyle.Linear), 
+        {
+            Position = UDim2.new(particle.Position.X.Scale + math.random(-20, 20)/100, 0, endY, 0),
+            Rotation = rotation
+        }
+    )
+    
+    local fadeTween = TweenService:Create(particle, 
+        TweenInfo.new(duration * 0.8, Enum.EasingStyle.Quad), 
+        {BackgroundTransparency = 1}
+    )
+    
+    moveTween:Play()
+    spawn(function()
+        wait(duration * 0.2)
+        fadeTween:Play()
+    end)
+    
+    moveTween.Completed:Connect(function()
+        particle:Destroy()
+    end)
+end
+
+local function createAvatarOrb()
+    local orb = Instance.new("Frame")
+    orb.Size = UDim2.new(0, math.random(4, 12), 0, math.random(4, 12))
+    orb.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+    orb.BackgroundTransparency = 0.4
+    orb.BorderSizePixel = 0
+    orb.ZIndex = 2
+    orb.Parent = avatarFrame
+    
+    local orbCorner = Instance.new("UICorner")
+    orbCorner.CornerRadius = UDim.new(1, 0)
+    orbCorner.Parent = orb
+    
+    local orbGlow = Instance.new("UIStroke")
+    orbGlow.Color = Color3.fromRGB(255, 223, 100)
+    orbGlow.Thickness = 1
+    orbGlow.Transparency = 0.3
+    orbGlow.Parent = orb
+    
+    local angle = math.random() * math.pi * 2
+    local radius = math.random(70, 100)
+    local centerX, centerY = 60, 60
+    
+    local x = centerX + math.cos(angle) * radius
+    local y = centerY + math.sin(angle) * radius
+    
+    orb.Position = UDim2.new(0, x, 0, y)
+    
+    local rotateTween = TweenService:Create(orb, 
+        TweenInfo.new(math.random(2, 4), Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), 
+        {Rotation = 360}
+    )
+    rotateTween:Play()
+    
+    spawn(function()
+        wait(math.random(4, 7))
+        orb:Destroy()
+    end)
+end
+
+local function animateEntrance()
+    whooshSound:Play()
+    
+    local frameInTween = TweenService:Create(mainFrame, 
+        TweenInfo.new(1.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 600, 0, 450)}
+    )
+    frameInTween:Play()
+    
+    wait(0.4)
+    local avatarTween = TweenService:Create(avatarFrame, 
+        TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 120, 0, 120)}
+    )
+    avatarTween:Play()
+    
+    spawn(function()
+        wait(1.5)
+        while avatarFrame.Parent do
+            local pulseUp = TweenService:Create(avatarStroke, 
+                TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
+                {Thickness = 5, Transparency = 0.1}
+            )
+            pulseUp:Play()
+            pulseUp.Completed:Wait()
+            
+            local pulseDown = TweenService:Create(avatarStroke, 
+                TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
+                {Thickness = 3, Transparency = 0.2}
+            )
+            pulseDown:Play()
+            pulseDown.Completed:Wait()
+        end
+    end)
+    
+    local glowTween = TweenService:Create(glowBorder, 
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), 
+        {Transparency = 0.1, Thickness = 6}
+    )
+    glowTween:Play()
+end
+
+local function typewriterEffect(textLabel, fullText, speed, soundEffect)
+    textLabel.Text = ""
+    local displayText = ""
+    
+    for i = 1, #fullText do
+        displayText = displayText .. fullText:sub(i, i)
+        textLabel.Text = displayText
+        
+        if soundEffect and math.random() > 0.7 then
+            soundEffect:Play()
+        end
+        
+        if i < #fullText then
+            textLabel.Text = displayText .. "_"
+            wait(speed)
+            textLabel.Text = displayText
+        end
+        wait(speed * 0.3)
+    end
+end
+
+local function animateLoadingBar(duration)
+    local steps = 100
+    local stepDuration = duration / steps
+    
+    for i = 0, steps do
+        local progress = i / steps
+        
+        local barTween = TweenService:Create(loadingBar, 
+            TweenInfo.new(stepDuration * 0.8, Enum.EasingStyle.Quad), 
+            {Size = UDim2.new(progress, 0, 1, 0)}
+        )
+        barTween:Play()
+        
+        percentageText.Text = math.floor(progress * 100) .. "%"
+        
+        if progress < 0.3 then
+            loadingText.Text = "Initializing System..."
+        elseif progress < 0.6 then
+            loadingText.Text = "Loading Resources..."
+        elseif progress < 0.9 then
+            loadingText.Text = "Preparing Scripts..."
+        else
+            loadingText.Text = "Almost Ready!"
+        end
+        
+        wait(stepDuration)
+    end
+end
+
+spawn(function()
+    while backgroundFrame.Parent do
+        local rotateTween = TweenService:Create(bgGradient, 
+            TweenInfo.new(10, Enum.EasingStyle.Linear), 
+            {Rotation = b
