@@ -31,6 +31,7 @@ function ExtraModule.Init(deps)
         TargetFruit = nil,
         LastCheckedRestockTime = 0,
         StatsInterval = 5,
+        RollInterval = 60, 
     }
 
     -- ═══════════════════════════════════════
@@ -42,8 +43,8 @@ function ExtraModule.Init(deps)
     local function GetCastPos()
         local Char = Plr.Character
         if Char and Char:FindFirstChild("HumanoidRootPart") then
-            return Char.HumanoidRootPart.Position 
-                + (Char.HumanoidRootPart.CFrame.LookVector * 50) 
+            return Char.HumanoidRootPart.Position
+                + (Char.HumanoidRootPart.CFrame.LookVector * 50)
                 - Vector3.new(0, 12, 0)
         end
         return Vector3.new(0, 0, 0)
@@ -58,7 +59,7 @@ function ExtraModule.Init(deps)
     end
 
     local function PerfectCast()
-        local FishingRequest = ReplicatedStorage:FindFirstChild("FishReplicated") 
+        local FishingRequest = ReplicatedStorage:FindFirstChild("FishReplicated")
             and ReplicatedStorage.FishReplicated:FindFirstChild("FishingRequest")
         local x = Workspace.CurrentCamera.ViewportSize.X / 2
         local y = Workspace.CurrentCamera.ViewportSize.Y / 2
@@ -73,11 +74,9 @@ function ExtraModule.Init(deps)
         VirtualInputManager:SendMouseButtonEvent(x, y, 0, false, game, 1)
     end
 
-    -- خرید بایت با کال درست
     local function BuyBait()
         if not State.AutoBuyBait then return end
         pcall(function()
-            -- چک تعداد بایت فعلی
             local baitCount = 0
             local inv = CommF:InvokeServer("getInventory")
             if inv then
@@ -91,7 +90,6 @@ function ExtraModule.Init(deps)
             end
 
             if baitCount < 15 then
-                -- خرید 1 بسته = 10 تا بایت
                 CraftRemote:InvokeServer("Craft", "Basic Bait", 1, {})
                 WindUI:Notify({
                     Title = "خرید بایت",
@@ -102,7 +100,6 @@ function ExtraModule.Init(deps)
         end)
     end
 
-    -- فروش ماهی با کال درست
     local function SellFish()
         if not State.AutoSellFish then return end
         pcall(function()
@@ -117,7 +114,6 @@ function ExtraModule.Init(deps)
 
     local LastSellTime = 0
 
-    -- لوپ اصلی ماهیگیری
     task.spawn(function()
         while true do
             pcall(function()
@@ -136,24 +132,21 @@ function ExtraModule.Init(deps)
                 local Head = Character:FindFirstChild("Head")
                 if not Humanoid or not Head then task.wait(0.5); return end
 
-                -- خرید بایت اگه کم داریم
                 BuyBait()
 
-                -- فروش ماهی طبق تایمر
                 if State.AutoSellFish and (tick() - LastSellTime) > State.SellInterval then
                     LastSellTime = tick()
                     SellFish()
                 end
 
-                -- پیدا کردن چوب ماهیگیری
-                local tool = Character:FindFirstChild("Fishing Rod") 
+                local tool = Character:FindFirstChild("Fishing Rod")
                     or Backpack:FindFirstChild("Fishing Rod")
                 if not tool then task.wait(1); return end
 
                 if tool.Parent == Backpack then
                     Humanoid:EquipTool(tool)
                     pcall(function()
-                        local FR = ReplicatedStorage:FindFirstChild("FishReplicated") 
+                        local FR = ReplicatedStorage:FindFirstChild("FishReplicated")
                             and ReplicatedStorage.FishReplicated:FindFirstChild("FishingRequest")
                         if FR then FR:InvokeServer("RodEquipped") end
                     end)
@@ -161,11 +154,8 @@ function ExtraModule.Init(deps)
                 end
 
                 FishingActive = true
-
-                -- پرتاب
                 PerfectCast()
 
-                -- تشخیص ماهی از طریق Attachment
                 local FishDetected = false
                 local StartTime = tick()
                 local oldAttachments = {}
@@ -187,14 +177,11 @@ function ExtraModule.Init(deps)
                 if FishDetected and State.AutoFish then
                     TapClick()
                     task.wait(2)
-
-                    -- گرفتن ماهی
                     pcall(function()
-                        local FR = ReplicatedStorage:FindFirstChild("FishReplicated") 
+                        local FR = ReplicatedStorage:FindFirstChild("FishReplicated")
                             and ReplicatedStorage.FishReplicated:FindFirstChild("FishingRequest")
                         if FR then FR:InvokeServer("Catch", 1, 0, 1) end
                     end)
-
                     State.TotalFishCaught = State.TotalFishCaught + 1
                     task.wait(1)
                 else
@@ -211,30 +198,62 @@ function ExtraModule.Init(deps)
     -- رول گاچا
     -- ═══════════════════════════════════════
     local function CheckGachaReady()
-        local timeReady = false
-        local moneyReady = false
-
+        local isReady = false
         pcall(function()
-            local checkTime = CommF:InvokeServer("Cousin", "CheckTime", "DLCBoxData")
-            timeReady = (
-                checkTime == true 
-                or checkTime == 0 
-                or tostring(checkTime):lower():find("true") ~= nil
-                or tostring(checkTime):lower():find("ready") ~= nil
-            )
+            local result = CommF:InvokeServer("Cousin", "CheckCanBuyType", "DLCBoxData")
+            local outputText = tostring(result)
+            if outputText == "1" or outputText == "true" or outputText == "0" then
+                isReady = true
+            end
         end)
+        return isReady
+    end
 
+    local function CloseGachaUI()
+        task.wait(1.5)
         pcall(function()
-            local canBuy = CommF:InvokeServer("Cousin", "CheckCanBuyType", "DLCBoxData")
-            moneyReady = (
-                canBuy == 1 
-                or canBuy == true 
-                or tostring(canBuy) == "1" 
-                or tostring(canBuy) == "true"
-            )
-        end)
+            local playerGui = Plr.PlayerGui
+            local closeNames = {
+                "close", "exit", "back", "bottem", "botem",
+                "bottom", "btn", "closebtn", "closebotemn",
+                "closebotem", "closebottom", "closebutton",
+            }
 
-        return timeReady and moneyReady
+            local function searchAndClick(parent, depth)
+                if depth > 10 then return false end
+                for _, obj in pairs(parent:GetChildren()) do
+                    if obj:IsA("GuiButton") and obj.Visible then
+                        local nm = string.lower(obj.Name)
+                        local tx = string.lower(tostring(obj.Text or ""))
+                        local isClose = false
+
+                        for _, cn in pairs(closeNames) do
+                            if nm:find(cn) then isClose = true; break end
+                        end
+                        if tx == "x" or tx == "close" or tx == "exit"
+                            or tx == "✕" or tx == "✖" or tx == "❌" then
+                            isClose = true
+                        end
+
+                        if isClose then
+                            pcall(function() obj.MouseButton1Click:Fire() end)
+                            local absPos = obj.AbsolutePosition
+                            local absSize = obj.AbsoluteSize
+                            local cx = absPos.X + absSize.X / 2
+                            local cy = absPos.Y + absSize.Y / 2
+                            VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, true, game, 1)
+                            task.wait(0.05)
+                            VirtualInputManager:SendMouseButtonEvent(cx, cy, 0, false, game, 1)
+                            return true
+                        end
+                    end
+                    if searchAndClick(obj, depth + 1) then return true end
+                end
+                return false
+            end
+
+            searchAndClick(playerGui, 0)
+        end)
     end
 
     local function DoRoll()
@@ -244,14 +263,24 @@ function ExtraModule.Init(deps)
 
         WindUI:Notify({Title = "گاچا", Content = "در حال رول زدن...", Duration = 3})
 
+        local success = false
         pcall(function()
-            CommF:InvokeServer("Cousin", "BuyBox", "DLCBoxData")
+            local result = CommF:InvokeServer("Cousin", "BuyBox", "DLCBoxData")
+            if result ~= nil and result ~= false then
+                success = true
+            end
         end)
 
-        task.wait(3)
+        task.wait(2.5)
+        CloseGachaUI()
+        task.wait(1)
+
         State.IsRolling = false
         if ResumeFarms then ResumeFarms() end
-        WindUI:Notify({Title = "گاچا", Content = "رول زده شد!", Duration = 3})
+
+        if success then
+            WindUI:Notify({Title = "گاچا", Content = "رول زده شد! ✅", Duration = 3})
+        end
     end
 
     task.spawn(function()
@@ -259,30 +288,94 @@ function ExtraModule.Init(deps)
             pcall(function()
                 if not State.AutoRoll then return end
                 if State.IsRolling then return end
-                if CheckGachaReady() then DoRoll() end
+                
+                if CheckGachaReady() then
+                    DoRoll()
+                end
             end)
-            task.wait(60)
+            task.wait(State.RollInterval or 60)
         end
     end)
 
     -- ═══════════════════════════════════════
     -- استور فروت
     -- ═══════════════════════════════════════
+    local function GetStoreName(fruitName)
+        local baseName = fruitName:gsub("%s*Fruit%s*$", ""):gsub("%s+$", "")
+        return baseName .. "-" .. baseName
+    end
+
+    local function TryStoreFruit(tool, character, humanoid)
+        local fruitName = tool.Name
+        local storeName = GetStoreName(fruitName)
+
+        if tool.Parent == Plr.Backpack then
+            humanoid:EquipTool(tool)
+            task.wait(0.6)
+        end
+
+        local equippedInstance = character:FindFirstChild(fruitName)
+            or character:FindFirstChildWhichIsA("Tool")
+
+        if not equippedInstance then
+            humanoid:UnequipTools()
+            task.wait(0.3)
+            return false
+        end
+
+        local storeSuccess = false
+        pcall(function()
+            CommF:InvokeServer("StoreFruit", storeName, equippedInstance)
+            storeSuccess = true
+        end)
+
+        task.wait(0.4)
+        humanoid:UnequipTools()
+        task.wait(0.3)
+
+        if storeSuccess then
+            WindUI:Notify({
+                Title = "استور فروت",
+                Content = "فروت استور شد: " .. fruitName,
+                Duration = 2
+            })
+        end
+
+        return storeSuccess
+    end
+
     task.spawn(function()
-        while task.wait(5) do
+        while task.wait(3) do
             pcall(function()
                 if not State.AutoStore then return end
-                -- چک فروت توی بکپک
+
+                local Character = Plr.Character
+                if not Character then return end
+
+                local Humanoid = Character:FindFirstChild("Humanoid")
+                if not Humanoid then return end
+
                 for _, tool in pairs(Plr.Backpack:GetChildren()) do
                     if tool:IsA("Tool") and tool.ToolTip == "Blox Fruit" then
+                        TryStoreFruit(tool, Character, Humanoid)
+                        task.wait(0.5)
+                    end
+                end
+
+                for _, tool in pairs(Character:GetChildren()) do
+                    if tool:IsA("Tool") and tool.ToolTip == "Blox Fruit" then
+                        local fruitName = tool.Name
+                        local storeName = GetStoreName(fruitName)
+
                         pcall(function()
-                            CommF:InvokeServer("StoreFruit", tool.Name)
+                            CommF:InvokeServer("StoreFruit", storeName, tool)
                             WindUI:Notify({
                                 Title = "استور فروت",
-                                Content = "فروت استور شد: " .. tool.Name,
+                                Content = "فروت استور شد: " .. fruitName,
                                 Duration = 2
                             })
                         end)
+                        task.wait(0.5)
                     end
                 end
             end)
@@ -290,14 +383,14 @@ function ExtraModule.Init(deps)
     end)
 
     -- ═══════════════════════════════════════
-    -- اتو استتس با کال درست
+    -- اتو استتس
     -- ═══════════════════════════════════════
     local StatMap = {
-        ["Melee"]      = "Melee",
-        ["Defense"]    = "Defense",
-        ["Sword"]      = "Sword",
-        ["Gun"]        = "Gun",
-        ["Demon Fruit"]= "Demon_Fruit",
+        ["Melee"]       = "Melee",
+        ["Defense"]     = "Defense",
+        ["Sword"]       = "Sword",
+        ["Gun"]         = "Gun",
+        ["Demon Fruit"] = "Demon_Fruit",
     }
 
     task.spawn(function()
@@ -312,7 +405,6 @@ function ExtraModule.Init(deps)
                 for statName, _ in pairs(ss) do
                     local realName = StatMap[statName] or statName
                     pcall(function()
-                        -- کال درست: AddPoint, StatName, Amount
                         CommF:InvokeServer("AddPoint", realName, pts)
                     end)
                     task.wait(0.1)
@@ -323,8 +415,18 @@ function ExtraModule.Init(deps)
     end)
 
     -- ═══════════════════════════════════════
-    -- اتو خرید فروت از دیلر
+    -- اتو خرید فروت از دیلر (کاملا اصلاح شده)
     -- ═══════════════════════════════════════
+    
+    -- تابع دریافت دقیق پول (Beli) پلیر
+    local function GetPlayerBeli()
+        local data = Plr:FindFirstChild("Data")
+        if data and data:FindFirstChild("Beli") then
+            return data.Beli.Value
+        end
+        return 0
+    end
+
     task.spawn(function()
         while task.wait(30) do
             pcall(function()
@@ -332,31 +434,55 @@ function ExtraModule.Init(deps)
                 local targetFruit = State.TargetFruit
                 if not targetFruit then return end
 
+                -- جلوگیری از اسپم سرور (چک هر 1 دقیقه یکبار)
                 local now = tick()
                 local lastCheck = State.LastCheckedRestockTime or 0
                 if (now - lastCheck) < 60 then return end
                 State.LastCheckedRestockTime = now
 
+                -- دریافت استاک فروت ها
                 local stock = nil
                 pcall(function()
                     stock = CommF:InvokeServer("GetFruits", false)
                 end)
-                if not stock then return end
+                if type(stock) ~= "table" then return end
 
+                -- تمیز کردن اسم هدف (مثلا "rubber" از "Rubber-Rubber")
                 local targetClean = string.lower(string.split(targetFruit, "-")[1] or targetFruit)
+                targetClean = targetClean:gsub(" fruit", ""):gsub("%s+$", "")
+
+                local playerMoney = GetPlayerBeli()
 
                 for _, item in pairs(stock) do
-                    if item.OnSale and item.Name then
-                        local itemClean = string.lower(string.split(item.Name, "-")[1] or item.Name)
-                        if itemClean == targetClean or string.find(itemClean, targetClean) then
-                            pcall(function()
-                                CommF:InvokeServer("BuyFruit", item.Name, false)
+                    -- بررسی اینکه تو استاک باشه و اسم/قیمت داشته باشه
+                    if item.OnSale and item.Name and item.Price then
+                        local itemNameLower = string.lower(item.Name)
+                        
+                        -- اگه فروت مورد نظر بود
+                        if itemNameLower:find(targetClean) then
+                            
+                            -- چک کردن پول پلیر
+                            if playerMoney >= item.Price then
+                                pcall(function()
+                                    -- ریموت اصلی که با RemoteSpy پیدا کردی
+                                    local success = CommF:InvokeServer("PurchaseRawFruit", item.Name, false)
+                                    
+                                    WindUI:Notify({
+                                        Title = "خرید فروت موفق",
+                                        Content = "فروت " .. item.Name .. " با موفقیت خریداری شد!",
+                                        Duration = 5
+                                    })
+                                end)
+                            else
+                                -- پول ناکافی
                                 WindUI:Notify({
-                                    Title = "خرید فروت",
-                                    Content = "فروت خریداری شد: " .. item.Name,
+                                    Title = "پول ناکافی برای فروت",
+                                    Content = "فروت " .. item.Name .. " استاک شد اما پول شما کافی نیست! (قیمت: " .. item.Price .. ")",
                                     Duration = 5
                                 })
-                            end)
+                            end
+                            
+                            -- بعد از پیدا کردن فروت حلقه رو میشکنیم تا بقیه رو چک نکنه
                             break
                         end
                     end
