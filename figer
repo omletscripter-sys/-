@@ -1,5 +1,4 @@
---[[
-    ╔═══════════════════════════════════════════════════════════════╗
+--[[╔═══════════════════════════════════════════════════════════════╗
     ║                    OMLET HUB v0.4.5                          ║
     ║        Auto LevelUp (Module) + Auto Boss + Auto Raid          ║
     ║        Smart Auto Fruit + Double Gacha + Live Status          ║
@@ -88,7 +87,6 @@ local Settings = {
 local RAID_TYPES = { ["Flame"]="Flame", ["Ice"]="Ice", ["Quake"]="Quake", ["Light"]="Light", ["Dark"]="Dark", ["Spider"]="Spider", ["Rumble"]="Rumble", ["Magma"]="Magma", ["Buddha"]="Human: Buddha", ["Sand"]="Sand", ["Phoenix"]="Phoenix", ["Dough"]="Dough" }
 local RAID_FRUITS = { "Rocket-Rocket","Spin-Spin","Chop-Chop","Spring-Spring","Bomb-Bomb","Spike-Spike","Flame-Flame","Falcon-Falcon","Ice-Ice","Sand-Sand","Dark-Dark","Diamond-Diamond","Light-Light","Rubber-Rubber","Barrier-Barrier","Ghost-Ghost","Magma-Magma","Quake-Quake","Buddha-Buddha","Love-Love","Spider-Spider","Sound-Sound","Phoenix-Phoenix","Portal-Portal","Rumble-Rumble","Pain-Pain","Blizzard-Blizzard","Gravity-Gravity","Mammoth-Mammoth","T-Rex-T-Rex","Dough-Dough","Shadow-Shadow","Venom-Venom","Control-Control","Spirit-Spirit","Dragon-Dragon","Leopard-Leopard","Kitsune-Kitsune" }
 
--- تبدیل لیست فروت‌ها برای Dropdown ها
 local DisplayFruitNames = {}
 local FruitRealNamesMap = {}
 for _, f in ipairs(RAID_FRUITS) do
@@ -116,13 +114,63 @@ local DoughKingEnabled, DoughKingPhase, DoughKingRemaining = false, "Idle", 999
 local CurrentTarget, ChestCurrentTarget, CurrentExpandedEnemy, ActiveTween, ChestActiveTween = nil, nil, nil, nil, nil
 local LastTargetEnemy, LastTargetTime, ChestStopSignal = nil, 0, false
 
-local AutoRaidSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/raid"))()
-local AutoLevelUpSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/lev"))()
-local AutoLevelUp = AutoLevelUpSystem(Settings, WindUI, Net, ReplicatedStorage, Workspace, TweenService, VirtualInputManager, GuiService, RegisterAttack, RegisterHit)
+local RaidConfig = {
+    RaidEnabled = false, RaidAutoRestart = true, RaidSelectedType = "Flame", RaidSelectedFruit = "Flame-Flame",
+    RaidPhase = "Idle", RaidTarget = nil, RaidAttackEnabled = false, RaidConfirmed = false, RaidLastKnownSpawn = nil,
+    RaidNoEnemyTimer = 0, RaidTeleportStartTime = 0, RaidPositionBeforeButton = nil, RaidLastTargetEnemy = nil,
+    RaidLastAttackTime = 0, RaidTargetStartTime = 0, RaidIgnoredNPCs = {}, RaidDiscoveredIslands = {},
+    RaidCurrentIslandTarget = nil, RaidPendingIslandTarget = nil, RaidIsRetreating = false, RaidRetreatPosition = nil,
+    RaidLastTrackedPosition = nil, RaidRetreatAnchorY = 0, ActiveTween = nil, CurrentExpandedEnemy = nil, WeaponMode = "Melee",
+}
 
--- ❗️لینک گیت هاب شما اینجا قرار بگیرد ❗️
-local ExtraSystemLink = "https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/exexexexede"
+-- =======================================================
+-- 🔴 سیستم بارگذاری امن (Safe Load) برای جلوگیری از کرش 🔴
+-- =======================================================
 
+-- لینک‌های اصلی (لینک سوم را با لینک واقعی خودتان عوض کنید)
+local raidLink = "https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/raid"
+local levLink  = "https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/lev"
+local extraLink= "https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/exexexexede" 
+
+local function LoadModuleSafely(url, moduleName)
+    local success, scriptText = pcall(function() return game:HttpGet(url) end)
+    if not success or string.find(scriptText, "404: Not Found") then
+        warn("[OMLET HUB] لینک " .. moduleName .. " مشکل دارد!")
+        return nil
+    end
+    local loadedFunc, err = loadstring(scriptText)
+    if not loadedFunc then
+        warn("[OMLET HUB] ارور سینتکس در " .. moduleName .. ": " .. tostring(err))
+        return nil
+    end
+    -- اگر ماژول چیزی Return نکند، اینجا nil می‌شود
+    local result = loadedFunc()
+    if not result then
+        warn("[OMLET HUB] اخطار: فایل " .. moduleName .. " در گیت‌هاب چیزی را Return نمیکند!")
+    end
+    return result
+end
+
+-- 1. لود کردن رید
+local RawRaidSystem = LoadModuleSafely(raidLink, "Raid")
+local AutoRaid = nil
+if type(RawRaidSystem) == "function" then
+    AutoRaid = RawRaidSystem(Settings, WindUI, RaidConfig)
+else
+    -- ساخت توابع الکی برای جلوگیری از ارور
+    AutoRaid = { Start = function() end, Stop = function() end, SetWeaponMode = function() end, SetType = function() end, SetFruit = function() end, SetAutoRestart = function() end }
+end
+
+-- 2. لود کردن لول آپ
+local RawLevelUpSystem = LoadModuleSafely(levLink, "LevelUp")
+local AutoLevelUp = nil
+if type(RawLevelUpSystem) == "function" then
+    AutoLevelUp = RawLevelUpSystem(Settings, WindUI, Net, ReplicatedStorage, Workspace, TweenService, VirtualInputManager, GuiService, RegisterAttack, RegisterHit)
+else
+    AutoLevelUp = { Start = function() end, Stop = function() end, SetWeaponMode = function() end, SetAttackMethod = function() end, SetBossInLevelUp = function() end, Tick = function() end }
+end
+
+-- توابع مربوط به توقف/ادامه (نیاز برای Extra)
 local SavedStates = {}
 local function PauseMainFarms()
     SavedStates.LevelUp = LevelUpEnabled; SavedStates.BossFarm = BossFarmEnabled
@@ -142,12 +190,22 @@ local function ResumeMainFarms()
     else FarmMode = "None" end
 end
 
-local ExtraModule = loadstring(game:HttpGet(ExtraSystemLink))()
-local Extra = ExtraModule.Init({
-    Plr = Plr, ReplicatedStorage = ReplicatedStorage, Workspace = Workspace,
-    VirtualInputManager = VirtualInputManager, GuiService = GuiService,
-    WindUI = WindUI, PauseFarms = PauseMainFarms, ResumeFarms = ResumeMainFarms
-})
+-- 3. لود کردن اکسترا (Extra)
+local RawExtraModule = LoadModuleSafely(extraLink, "Extra")
+local Extra = nil
+if type(RawExtraModule) == "table" and RawExtraModule.Init then
+    Extra = RawExtraModule.Init({
+        Plr = Plr, ReplicatedStorage = ReplicatedStorage, Workspace = Workspace,
+        VirtualInputManager = VirtualInputManager, GuiService = GuiService,
+        WindUI = WindUI, PauseFarms = PauseMainFarms, ResumeFarms = ResumeMainFarms
+    })
+else
+    Extra = { Set = function() end, Get = function() return false end }
+end
+
+-- =======================================================
+-- پایان بخش لودینگ امن
+-- =======================================================
 
 local function GetRandomDelay() return Settings.MinClickDelay+(math.random()*(Settings.MaxClickDelay-Settings.MinClickDelay)) end
 local function GetRandomAttackValue() return math.floor((0.5+math.random()*0.5)*10000)/10000 end
@@ -191,7 +249,6 @@ local function FindFruitInWorld()
             if v:FindFirstChild("Handle") then
                 local isAll = next(SelectedFruitsToCollect)==nil
                 for sel,_ in pairs(SelectedFruitsToCollect) do
-                    -- استفاده از مپ واقعی برای چک کردن
                     local realName = FruitRealNamesMap[sel] or sel 
                     if string.find(string.lower(v.Name), string.lower(realName)) then isAll=true; break end 
                 end
@@ -297,16 +354,6 @@ local function UseAbilities() for _,k in ipairs({"Z","X","C","F"}) do VirtualInp
 local function ClickNevermind(DG) local VB={}; for _,v in pairs(DG:GetDescendants()) do if v:IsA("TextButton") and v.Visible then table.insert(VB,v) end end; if #VB>0 then local b=VB[#VB]; local p=b.AbsolutePosition; local s=b.AbsoluteSize; local I=GuiService:GetGuiInset(); VirtualInputManager:SendMouseButtonEvent(p.X+s.X/2,p.Y+s.Y/2+I.Y,0,true,game,1); task.wait(0.05); VirtualInputManager:SendMouseButtonEvent(p.X+s.X/2,p.Y+s.Y/2+I.Y,0,false,game,1); return true end; return false end
 local function HandleDialogue() pcall(function() local M=Plr.PlayerGui:FindFirstChild("Main"); if not M then return end; local D=M:FindFirstChild("Dialogue"); if D and D.Visible then IsSafeToClick=false; task.wait(2); if D.Visible then ClickNevermind(D) end; task.wait(2); if D.Visible then ClickNevermind(D) end; task.wait(1) else if CurrentTarget and CurrentTarget.Mode=="Travel" then IsSafeToClick=false else IsSafeToClick=true end end end) end
 local function GetAggressiveSpawn(n) if SpawnCache[n] then return SpawnCache[n] end; if Workspace:FindFirstChild("_WorldOrigin") and Workspace._WorldOrigin:FindFirstChild("EnemySpawns") then for _,v in pairs(Workspace._WorldOrigin.EnemySpawns:GetChildren()) do if string.find(v.Name,n) then SpawnCache[n]=v.CFrame; return v.CFrame end end end; return nil end
-
-local RaidConfig = {
-    RaidEnabled = false, RaidAutoRestart = true, RaidSelectedType = "Flame", RaidSelectedFruit = "Flame-Flame",
-    RaidPhase = "Idle", RaidTarget = nil, RaidAttackEnabled = false, RaidConfirmed = false, RaidLastKnownSpawn = nil,
-    RaidNoEnemyTimer = 0, RaidTeleportStartTime = 0, RaidPositionBeforeButton = nil, RaidLastTargetEnemy = nil,
-    RaidLastAttackTime = 0, RaidTargetStartTime = 0, RaidIgnoredNPCs = {}, RaidDiscoveredIslands = {},
-    RaidCurrentIslandTarget = nil, RaidPendingIslandTarget = nil, RaidIsRetreating = false, RaidRetreatPosition = nil,
-    RaidLastTrackedPosition = nil, RaidRetreatAnchorY = 0, ActiveTween = nil, CurrentExpandedEnemy = nil, WeaponMode = "Melee",
-}
-local AutoRaid = AutoRaidSystem(Settings, WindUI, RaidConfig)
 
 local function GetActiveFarmMode()
     if FruitPriorityActive then return "Fruit" end
@@ -682,7 +729,6 @@ ABS:Toggle({Title="شروع اتو خرید فروت",Desc="در صورت موج
 local StatsTab=MainSection:Tab({Title="آمار و وضعیت",Icon="activity",IconColor=Color3.fromHex("#00BFFF"),Border=true})
 local StatusPanel = StatsTab:Paragraph({Title="وضعیت زنده", Desc="در حال بارگذاری..."})
 
--- کش کردن دیلر فروت ها
 local CachedDealerFruits = "در حال محاسبه..."
 local LastDealerCheckCycle = -1
 task.spawn(function()
