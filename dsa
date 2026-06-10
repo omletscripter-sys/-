@@ -1,11 +1,3 @@
---[[
-    ╔═══════════════════════════════════════════════════════════════╗
-    ║                    OMLET HUB v0.4.5                          ║
-    ║        Auto LevelUp (Module) + Auto Boss + Auto Raid          ║
-    ║        Smart Auto Fruit + Double Gacha + Live Status          ║
-    ╚═══════════════════════════════════════════════════════════════╝
-]]
-
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -196,15 +188,7 @@ elseif Sea == 3 then
     }
 end
 
--- ═══════════════════════════════════════
--- لود ماژول‌ها از گیتهاب جدید
--- ═══════════════════════════════════════
-local AutoLevelUpSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/lev"))()
-local AutoRaidSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/raid"))()
-local ExtraSystem = loadstring(game:HttpGet("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/exexexexede"))()
-
-local AutoLevelUp = AutoLevelUpSystem(Settings, WindUI, Net, ReplicatedStorage, Workspace, TweenService, VirtualInputManager, GuiService, RegisterAttack, RegisterHit)
-
+-- متغیرهای اصلی
 local FarmMode, WeaponMode, AttackMethod = "None", "Melee", "Click"
 local LevelUpEnabled, BossFarmEnabled, ChestFarmEnabled, FruitFarmEnabled = false, false, false, false
 local DoughKingEnabled, DoughKingPhase, DoughKingRemaining = false, "Idle", 999
@@ -226,8 +210,47 @@ local RaidConfig = {
     CurrentExpandedEnemy = nil, WeaponMode = "Melee",
 }
 
-local AutoRaid = AutoRaidSystem(Settings, WindUI, RaidConfig)
+-- ═══════════════════════════════════════
+-- 🟢 سیستم بارگذاری امن (ضد کرش) 🟢
+-- ═══════════════════════════════════════
+local function SafeLoad(url, name)
+    local success, result = pcall(function() return game:HttpGet(url) end)
+    if not success or string.find(result, "404: Not Found") then
+        warn("[OMLET HUB] لینک " .. name .. " خراب است یا وجود ندارد!")
+        return nil
+    end
+    local func, err = loadstring(result)
+    if not func then
+        warn("[OMLET HUB] ارور سینتکس در " .. name .. ": " .. tostring(err))
+        return nil
+    end
+    return func()
+end
 
+local AutoLevelUpSystem = SafeLoad("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/lev", "LevelUp")
+local AutoRaidSystem = SafeLoad("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/raid", "Raid")
+local ExtraSystem = SafeLoad("https://raw.githubusercontent.com/omletscripter-sys/-/refs/heads/main/exexexexede", "Extra")
+
+-- ایجاد متغیرهای پیش‌فرض و امن (برای جلوگیری از ارور nil)
+local AutoLevelUp = { Start = function() end, Stop = function() end, SetWeaponMode = function() end, SetAttackMethod = function() end, SetBossInLevelUp = function() end, Tick = function() end }
+local AutoRaid = { Start = function() end, Stop = function() end, SetWeaponMode = function() end, SetType = function() end, SetFruit = function() end, SetAutoRestart = function() end }
+local Extra = { Set = function() end, Get = function() return false end }
+
+-- 1. اجرای امن LevelUp
+if type(AutoLevelUpSystem) == "function" then
+    pcall(function()
+        AutoLevelUp = AutoLevelUpSystem(Settings, WindUI, Net, ReplicatedStorage, Workspace, TweenService, VirtualInputManager, GuiService, RegisterAttack, RegisterHit)
+    end)
+end
+
+-- 2. اجرای امن Raid
+if type(AutoRaidSystem) == "function" then
+    pcall(function()
+        AutoRaid = AutoRaidSystem(Settings, WindUI, RaidConfig)
+    end)
+end
+
+-- توابع مدیریت مکث و ادامه (برای اکسترا)
 local SavedStates = {}
 local function PauseMainFarms()
     SavedStates.LevelUp = LevelUpEnabled
@@ -257,16 +280,24 @@ local function ResumeMainFarms()
     end
 end
 
-local Extra = ExtraSystem.Init({
-    Plr = Plr,
-    ReplicatedStorage = ReplicatedStorage,
-    Workspace = Workspace,
-    VirtualInputManager = VirtualInputManager,
-    GuiService = GuiService,
-    WindUI = WindUI,
-    PauseFarms = PauseMainFarms,
-    ResumeFarms = ResumeMainFarms,
-})
+-- 3. اجرای امن Extra
+if type(ExtraSystem) == "table" and type(ExtraSystem.Init) == "function" then
+    pcall(function()
+        Extra = ExtraSystem.Init({
+            Plr = Plr,
+            ReplicatedStorage = ReplicatedStorage,
+            Workspace = Workspace,
+            VirtualInputManager = VirtualInputManager,
+            GuiService = GuiService,
+            WindUI = WindUI,
+            PauseFarms = PauseMainFarms,
+            ResumeFarms = ResumeMainFarms,
+        })
+    end)
+end
+-- ═══════════════════════════════════════
+-- پایان بخش ضد کرش
+-- ═══════════════════════════════════════
 
 local function GetRandomDelay() return Settings.MinClickDelay+(math.random()*(Settings.MaxClickDelay-Settings.MinClickDelay)) end
 local function GetRandomAttackValue() return math.floor((0.5+math.random()*0.5)*10000)/10000 end
